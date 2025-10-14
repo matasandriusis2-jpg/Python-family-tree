@@ -1,0 +1,373 @@
+class Person:
+    def __init__(self, name, birth_date, is_alive, death_date = None, partner=None):
+        """
+        Initialize a Person instance.
+        :param name: Name of the person
+        :param birth_date: Birth date of the person
+        :param is_alive: Boolean indicating if the person is alive
+        :param death_date: date of persons death
+        :param partner: Partner of the person (optional)
+        """
+        self.name = name
+        self.birth_date = birth_date
+        self.is_alive = is_alive
+        self.partner = partner  # Start with the provided partner or None
+        self.parents = []  # Start with no parents
+        self.children = []  # Start with no children
+        self.death_date = death_date
+
+        # Ensure the partner relationship is mutual if a partner is provided
+        if self.partner and self.partner.partner != self:
+            self.partner.partner = self
+
+    def add_child(self, child):
+        """Add a child to this person and set this person as the parent."""
+        if child not in self.children:  # Avoid duplicates
+            self.children.append(child)
+        if self not in child.parents:  # Avoid duplicates
+            child.parents.append(self)
+
+    def get_partner(self):
+        """Return the partner of this person."""
+        return self.partner
+
+    def get_parents(self):
+        """Return the parents of this person."""
+        return self.parents
+
+    def get_siblings(self):
+        """Return the siblings of this person."""
+        siblings = set()
+        for parent in self.parents:
+            siblings.update(parent.children)
+        siblings.discard(self)  # Remove self from the list of siblings
+        return siblings
+
+    def get_grandparents(self):
+        """Return the grandparents of this person."""
+        grandparents = set()
+        for parent in self.parents:
+            grandparents.update(parent.get_parents())
+        return grandparents
+
+    def get_immediate_family(self):
+        """Return the immediate family of this person."""
+        immediate_family = set()
+
+        # Add parents
+        immediate_family.update(self.parents)
+
+        # Add siblings
+        immediate_family.update(self.get_siblings())
+
+        # Add partner
+        if self.partner:
+            immediate_family.add(self.partner)
+
+        # Add children
+        immediate_family.update(self.children)
+
+        return immediate_family
+
+    def get_aunts_uncles(self):
+        """Return the aunts and uncles of this person."""
+        aunts_uncles = set()
+        for parent in self.parents:
+            aunts_uncles.update(parent.get_siblings())
+        return aunts_uncles
+
+    def get_cousins(self):
+        """Return the cousins of this person."""
+        cousins = set()
+        for aunt_uncle in self.get_aunts_uncles():
+            cousins.update(aunt_uncle.children)
+        return cousins
+
+    def get_grandchildren(self):
+        """Return the grandchildren of this person."""
+        grandchildren = set()
+        for child in self.children:
+            grandchildren.update(child.children)
+        return grandchildren
+
+    def get_extended_family(self):
+        """Return the extended family of this person."""
+        extended_family = {
+            "Parents": [parent.name for parent in self.get_parents()],
+            "Siblings": [sibling.name for sibling in self.get_siblings()],
+            "Spouse": self.partner.name if self.partner else None,
+            "Children": [child.name for child in self.children],
+            "Aunts/Uncles": [aunt_uncle.name for aunt_uncle in self.get_aunts_uncles()],
+            "Cousins": [cousin.name for cousin in self.get_cousins()],
+        }
+        return extended_family
+
+
+class FamilyTree:
+    def __init__(self):
+        self.members = []
+
+    def add_member(self, person):
+        """Add a new member to the family tree."""
+        self.members.append(person)
+
+    def find_member_by_name(self, name):
+        """Find a member by name in the family tree."""
+        for member in self.members:
+            if member.name == name:
+                return member
+        return None
+
+    def display_birthdays(self):
+        """Displays all birthdays in the family tree, sorted by month and day, merging members with the same birthday."""
+        birthday_dict = {}
+
+        # Collect and organize birthdays by date
+        for member in self.members:
+            if member.birth_date:
+                # Extract only the MM-DD part of the date
+                month_day = member.birth_date[5:]  # Format: MM-DD
+                if month_day not in birthday_dict:
+                    birthday_dict[month_day] = []
+                birthday_dict[month_day].append(member.name)
+
+        # Sort birthdays by month and day
+        sorted_birthdays = sorted(birthday_dict.items(), key=lambda x: (int(x[0][:2]), int(x[0][3:])))
+
+        # Display the birthday calendar
+        print("\n--- Birthday Calendar (Sorted by Month and Day) ---")
+        for date, names in sorted_birthdays:
+            print(f"{date}: {', '.join(names)}")
+
+    def calculate_average_age_of_death(self):
+        """Calculate the average age of death for deceased members."""
+        deceased_members = [member for member in self.members if not member.is_alive]
+        if not deceased_members:
+            print("No deceased members in the family tree.")
+            return
+
+        total_age = 0
+        for member in deceased_members:
+            birth_year = int(member.birth_date.split("-")[0])
+            death_year = int(member.death_date.split("-")[0])
+            total_age += death_year - birth_year
+
+        average_age = total_age / len(deceased_members)
+        print(f"The average age of death for deceased members is: {average_age:.2f}")
+
+
+    def average_number_of_children(self):
+        total_children = 0
+        total_people = len(self.members)
+
+        # Count the number of children for each person
+        for person in self.members:
+            total_children += len(person.children)
+
+        # Calculate the average
+        average_children = total_children / total_people
+        print(f"The average number of children per person in the family tree is: {average_children:.2f}")
+
+    def find_relationship(self, name, relationship):
+
+        person = self.find_member_by_name(name)
+        if not person:
+            print(f"No person found with the name {name}.")
+            return
+
+        if relationship == "1":
+            partner = person.get_partner()
+            if partner:
+                print(f"Partner of {name}: {partner.name}")
+            else:
+                print(f"{name} has no partner listed.")
+        elif relationship == "2":
+            parents = person.get_parents()
+            print(f"Parents of {name}: {[parent.name for parent in parents]}")
+        elif relationship == "3":
+            grandparents = person.get_grandparents()
+            print(f"Grandparents of {name}: {[grandparent.name for grandparent in grandparents]}")
+        elif relationship == "4":
+            grandchildren = person.get_grandchildren()
+            print(f"Grandchildren of {name}: {[grandchild.name for grandchild in grandchildren]}")
+        elif relationship == "5":
+            siblings = person.get_siblings()
+            print(f"Siblings of {name}: {[sibling.name for sibling in siblings]}")
+        elif relationship == "6":
+            cousins = person.get_cousins()
+            print(f"Cousins of {name}: {[cousin.name for cousin in cousins]}")
+        elif relationship == "7":
+            immediate_family = person.get_immediate_family()
+            print(f"Immediate family of {name}: {[member.name for member in immediate_family]}")
+        elif relationship == "8":
+            extended_family = person.get_extended_family()
+            print(f"Extended family of {name}:")
+            for key, members in extended_family.items():
+                print(f"  {key}: {members if members else 'None'}")
+        else:
+            print(f"Relationship type '{relationship}' not recognized.")
+
+
+# Build the family tree
+def build_family_tree():
+    # Create family tree
+    tree = FamilyTree()
+
+    # Create members and relationships directly
+    #Paternal(Otto) side
+    karl = Person("Karl Emmersohn", "1951-12-21", True)
+    sofia = Person("Sofia Emmersohn", "1954-03-14", True, partner = karl)
+    amira = Person("Amira Emmersohn", "1985-09-05", True)
+    lukas = Person("Lukas Muller", "1950-02-13", True)
+    emily = Person("Emily Muller", "1990-01-22", True)
+    friedrich = Person("Friedrich Emmersohn", "1925-03-18",False, "1998-11-22")
+    greta = Person("Greta Emmersohn", "1928-07-09", False, "2010-05-30",partner = friedrich)
+    heinrich = Person("Heinrich Muller", "1923-04-15", False, "1995-04-15")
+    elisabeth = Person("Elisabeth Muller", "1927-06-25", False, "2008-12-10",partner = heinrich)
+    anya = Person("Anya Emmersohn", "2010-08-19", True)
+    jakob = Person("Jakob Emmersohn", "2012-06-04", True)
+
+    #Maternal(Cornelia) side
+    sanji = Person("Sanji Patel", "1926-05-23", False, "1997-06-05")
+    ifrit = Person("Ifrit Patel", "1928-04-16", False, "2001-04-12",partner = sanji)
+    jamala = Person("Jamala Khan", "1933-03-17", False,"2006-01-29")
+    adam = Person("Adam Khan", "1932-09-05",False, "1999-07-09",partner = jamala)
+    zara = Person("Zara Khan", "1956-07-22", True)
+    rupert = Person("Rupert Khan", "1955-03-16",True, partner = zara)
+    abdi = Person("Abdi Khan", "1987-02-15",True)
+    patricia = Person("Patricia Khan", "1980-09-22",True)
+    abdi_jr = Person("Abdi Khan Jr", "2006-06-22",True)
+
+
+    cornelia = Person("Cornelia Emmersohn", "1985-09-05", True)
+    otto = Person("Otto Emmersohn", "1982-11-29", True, partner = cornelia)
+
+    # Establish child relationships
+    #Paternal(otto) side
+    lukas.add_child(emily)
+    elisabeth.add_child(lukas)
+    heinrich.add_child(lukas)
+    elisabeth.add_child(sofia)
+    heinrich.add_child(sofia)
+    greta.add_child(karl)
+    friedrich.add_child(karl)
+    karl.add_child(otto)
+    sofia.add_child(otto)
+    karl.add_child(amira)
+    sofia.add_child(amira)
+    otto.add_child(anya)
+    cornelia.add_child(anya)
+    otto.add_child(jakob)
+    cornelia.add_child(jakob)
+
+    #Maternal(Cornelia) side
+    patricia.add_child(abdi_jr)
+    zara.add_child(patricia)
+    rupert.add_child(patricia)
+    zara.add_child(cornelia)
+    rupert.add_child(cornelia)
+    zara.add_child(abdi)
+    rupert.add_child(abdi)
+    adam.add_child(rupert)
+    jamala.add_child(rupert)
+    ifrit.add_child(zara)
+    sanji.add_child(zara)
+
+
+    # Add members to the family tree
+    tree.add_member(karl)
+    tree.add_member(sofia)
+    tree.add_member(amira)
+    tree.add_member(lukas)
+    tree.add_member(emily)
+    tree.add_member(friedrich)
+    tree.add_member(greta)
+    tree.add_member(heinrich)
+    tree.add_member(elisabeth)
+    tree.add_member(anya)
+    tree.add_member(jakob)
+    tree.add_member(cornelia)
+    tree.add_member(otto)
+    tree.add_member(abdi_jr)
+    tree.add_member(patricia)
+    tree.add_member(abdi)
+    tree.add_member(rupert)
+    tree.add_member(zara)
+    tree.add_member(adam)
+    tree.add_member(jamala)
+    tree.add_member(ifrit)
+    tree.add_member(sanji)
+    return tree
+
+
+# Main function to query the family tree
+
+
+# Main function
+def main():
+    family_tree = build_family_tree()
+
+    print("\n--- Family Tree Members ---")
+    for member in family_tree.members:
+        print(f"- {member.name}")
+    print("\nTotal members:", len(family_tree.members))
+
+    while True:
+        query_type = input("Would you like to run 'family-wide' queries, 'person-specific' queries?, or 'exit' to quit ").lower()
+
+        if query_type == "exit":
+            print("Exiting the program. Goodbye!")
+            break
+
+        elif query_type == "family-wide":
+            print("Available family-wide queries:")
+            print("1. Average age of death")
+            print("2. Birthdays")
+            print("3. Average number of children")
+            choice = input("Enter your choice (1/2/3): ").strip()
+
+            if choice == "1":
+                family_tree.calculate_average_age_of_death()
+            elif choice == "2":
+                family_tree.display_birthdays()
+            elif choice == "3":
+                family_tree.average_number_of_children()
+            else:
+                print("Invalid choice. Please try again.")
+
+        elif query_type == "person-specific":
+            name = input("Enter the person's name: ").strip()
+            print("Available person-specific queries:")
+            print("1. Partner")
+            print("2. Parents")
+            print("3. Grandparents")
+            print("4. Grandchildren")
+            print("5. Siblings")
+            print("6. cousins")
+            print("7. immediate family")
+            print("8. extended family")
+            relationship = input("Enter the relationship to find (1/2/3/4/5/6/7/8): ").strip()
+
+            relationships = {
+                "1": "partner",
+                "2": "parents",
+                "3": "grandparents",
+                "4": "grandchildren",
+                "5": "siblings",
+                "6": "cousins",
+                "7": "immediate family",
+                "8": "extended family",
+            }
+
+
+            if relationship in relationships:
+                family_tree.find_relationship(name, relationship)
+            else:
+                print("Invalid choice. Please try again.")
+
+        else:
+            print("Invalid query type. Please try again.")
+
+
+if __name__ == "__main__":
+    main()
